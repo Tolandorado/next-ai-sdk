@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## ChatGPT Lite — тестовое задание
 
-## Getting Started
+Упрощённый аналог интерфейса ChatGPT с тредами, персистентностью сообщений в SQLite (через Bun) и базовой работой с XLSX‑таблицей.
 
-First, run the development server:
+### Стек
+
+- Next.js 16 (App Router, TypeScript)
+- Bun (dev‑сервер и SQLite через `bun:sqlite`)
+- Vercel AI SDK (`ai`, `@ai-sdk/openai`, `useChat`)
+- Tailwind (базовая стилизация из шаблона)
+- `xlsx` для работы с таблицей
+
+### Подготовка окружения
+
+1. Установите Bun: см. инструкции на `https://bun.sh`.
+2. В корне репозитория перейдите в папку фронтенда:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Скопируйте `.env` из примера и укажите ключ модели:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env   # создайте .env.example при необходимости
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Переменные:
 
-## Learn More
+- `OPENAI_API_KEY` — ключ OpenAI (или совместимой модели)
+- `DATABASE_PATH` — путь к SQLite (по умолчанию `./data/chat.db`)
+- `XLSX_FILE_PATH` — путь к XLSX‑файлу (по умолчанию `./data/example.xlsx`)
 
-To learn more about Next.js, take a look at the following resources:
+### Запуск
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+bun --bun run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Откройте `http://localhost:3000` в браузере.
 
-## Deploy on Vercel
+### Функциональность
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Слева — список тредов: создание нового, выбор существующего, загрузка истории.
+- Справа — чат на `useChat` с отправкой сообщений в `/api/chat` и сохранением в БД.
+- Сообщения и треды хранятся в SQLite (`bun:sqlite`) через слой репозиториев.
+- Кнопка «Открыть таблицу» загружает диапазон XLSX через `/api/xlsx/range` и показывает превью.
+- Клик по превью открывает модалку‑грид, где можно мышкой выделить диапазон и вставить меншон вида `@Sheet1!A1:B3` в чате.
+- Специальная команда:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+/update @Sheet1!A2 123
+```
+
+перед выполнением показывает подтверждение (Да/Нет) и, при согласии, обновляет ячейку через `/api/xlsx/update`.
+
