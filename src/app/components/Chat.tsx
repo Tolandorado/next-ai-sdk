@@ -1,0 +1,193 @@
+import { UpdateCellAction, UpdateRangeAction } from "@/lib/xlsx/types";
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
+import { useEffect, useMemo, useState } from "react";
+import { messagesApi } from "../api/messages/messagesApi";
+import { xlsxApi } from "../api/xlsx/xlsxApi";
+import { MessageInput } from "./MessageInput";
+import { MessageList } from "./MessageList";
+import { TableModal } from "./TableModal";
+
+interface ChatProps {
+    threadId: string | null;
+    onEnsureThread: () => Promise<string | null>;
+}
+
+const tableRangeFrom = process.env.NEXT_PUBLIC_DEFAULT_FROM || "A1";
+const tableRangeTo = process.env.NEXT_PUBLIC_DEFAULT_TO || "C3";
+const tableSheet = process.env.NEXT_PUBLIC_DEFAULT_SHEET || "Sheet1";
+
+export function Chat({ threadId, onEnsureThread }: ChatProps) {
+    const [tableData, setTableData] = useState<(string | number | null)[][]>([]);
+    const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+    const [input, setInput] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const transport = useMemo(() => new DefaultChatTransport({
+        api: "/api/chat",
+        body: () => ({ threadId }),
+    }), []);
+
+    const {
+        messages,
+        sendMessage,
+        status,
+        setMessages,
+    } = useChat({
+        transport,
+    });
+
+    useEffect(() => { console.log('actual messages:', messages) }, [messages])
+
+    useEffect(() => {
+        const loadMessages = async () => {
+            if (threadId) {
+                try {
+                    const data = await messagesApi.getByThreadId(threadId);
+                    setMessages(
+                        data.map((m: any) => ({
+                            id: m.id,
+                            role: m.role,
+                            parts: [{ type: 'text', text: m.content }],
+                        })),
+                    );
+                } catch (error) {
+                    console.error('Failed to load messages:', error);
+                }
+            } else {
+                setMessages([]);
+            }
+        };
+        loadMessages();
+    }, [threadId, setMessages]);
+
+    const handleOpenTable = async () => {
+        try {
+            const data = await xlsxApi.getRange({
+                sheet: tableSheet,
+                from: tableRangeFrom,
+                to: tableRangeTo,
+            });
+
+            setTableData(data.data.map((row: any[]) => row.map((c) => c.value)));
+            setIsTableModalOpen(true);
+        } catch (error) {
+            console.error("Failed to load table:", error);
+        }
+    };
+
+    const handleConfirmCellUpdate = async (
+        { sheet, cell, newValue }
+            : UpdateCellAction
+    ) => {
+        setIsProcessing(true);
+        try {
+            await sendMessage({
+                text: `Я подтверждаю обновление ячейки ${cell} на листе ${sheet} значением "${newValue}". Пожалуйста, выполните операцию.`,
+            });
+        } catch (error) {
+            console.error("Error confirming update:", error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleConfirmRangeUpdate = async (
+        { sheet, from, to, values }: UpdateRangeAction
+    ) => {
+        setIsProcessing(true);
+        try {
+            const cellCount = values.length * (values[0]?.length ?? 0);
+            sendMessage({
+                text: `Я подтверждаю обновление диапазона ${from}:${to} на листе ${sheet} (${cellCount} ячеек). Пожалуйста, выполните операцию.`,
+            });
+        } catch (error) {
+            console.error("Error confirming range update:", error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleCancelUpdate = async () => {
+        setIsProcessing(true);
+        try {
+            sendMessage({
+                text: "Отмена операции. Не выполняйте обновление.",
+            });
+        } catch (error) {
+            console.error("Error cancelling update:", error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleSaveSelection = (mention: string) => {
+        const space = input.endsWith(" ") || input.length === 0 ? "" : " ";
+        setInput(`${input}${space}${mention}`);
+    }
+
+    const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const trimmed = input.trim();
+        if (!trimmed) return;
+
+        let currentId = threadId;
+        if (!currentId) {
+            currentId = await onEnsureThread();
+            if (!currentId) {
+                alert("Failed to create thread");
+                return;
+            }
+        }
+
+        sendMessage({
+            text: trimmed,
+        });
+        setInput("");
+    };
+
+    return (
+        <main className="flex flex-1 flex-col h-screen overflow-hidden">
+            <header className="flex items-center justify-between gap-4 border-b border-zinc-200 px-6 py-4">
+                <div>
+                    <h1 className="text-lg font-semibold">ChatGPT Lite</h1>
+                    <p className="text-sm text-zinc-500">
+                        Чат с тредами, сохранением истории и UI для работы с XLSX.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleOpenTable}
+                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+                >
+                    Открыть таблицу
+                </button>
+            </header>
+            <section className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+                <MessageList
+                    messages={messages}
+                    onConfirmCellUpdate={handleConfirmCellUpdate}
+                    onConfirmRangeUpdate={handleConfirmRangeUpdate}
+                    onCancelUpdate={handleCancelUpdate}
+                    isProcessing={isProcessing}
+                    onSaveSelection={(mention) => handleSaveSelection(mention)}
+                />
+            </section>
+            <MessageInput
+                input={input}
+                handleInputChange={(e) => setInput(e.target.value)}
+                handleSubmit={onSubmit}
+                isLoading={status === 'streaming' || status === 'submitted'}
+            />
+            <TableModal
+                isOpen={isTableModalOpen}
+                sheet={tableSheet}
+                from={tableRangeFrom}
+                to={tableRangeTo}
+                data={tableData}
+                onClose={() => setIsTableModalOpen(false)}
+                onSaveSelection={(mention) => handleSaveSelection(mention)}
+            />
+        </main>
+    );
+}
