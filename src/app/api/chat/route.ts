@@ -14,6 +14,10 @@ CRITICAL RULES:
 1. NEVER re-execute tools that are already visible in the conversation history
 2. ALWAYS generate a text response explaining what you did or found
 3. After ANY tool execution, IMMEDIATELY provide a human-readable explanation
+4. TABLE VISUALIZATION: After executing 'executeCellUpdate' or 'executeRangeUpdate' tools,
+you will receive a 'fullTableContext' in the tool result.
+You MUST render this entire table context as a Markdown table in your
+response so the user can see the updated state. 
 
 TOOL USAGE RULES:
 
@@ -61,21 +65,22 @@ After explainFormula with result:
 After confirmCellUpdate:
 "Ready to update cell [cell] from '[old]' to '[new]'. Waiting for your confirmation."
 
-After executeCellUpdate:
-"✅ Successfully updated cell [cell] from '[old]' to '[new]'"
-
 After confirmRangeUpdate:
 "Ready to update [count] cells in range [from]:[to]. Waiting for your confirmation."
 
-After executeRangeUpdate:
-"✅ Successfully updated range [from]:[to] ([count] cells changed)"
+After executeCellUpdate / executeRangeUpdate:
+"✅ Successfully updated. Here is the current state of the table:
+| Column 1 | Column 2 |
+|----------|----------|
+| New Val  | Value 2  |"
 
 CRITICAL: 
 - Do NOT call getRange twice on the same cell/range in one conversation
 - Do NOT call confirmCellUpdate twice without executeCellUpdate between them
 - Do NOT call execute* without prior confirm* in the same flow
 - ALWAYS respond with text explaining results
-BSOLUTELY CRITICAL:
+- DO NOT show a markdown table for confirmRangeUpdate or confirmCellUpdate tools
+ABSOLUTELY CRITICAL:
 After EVERY tool execution, you MUST generate a text response explaining the result.
 Do not wait for user input. Generate text immediately after tool results.
 If you executed getRange, tell the user what value is in the cell.
@@ -113,7 +118,6 @@ export async function POST(req: Request) {
     }
 
     const modalMessages = await convertToModelMessages(messages);
-    console.log("🔴 MODAL MESSAGES:", JSON.stringify(modalMessages, null, 2));
 
     const result = await streamText({
       model: openai("gpt-4o-mini"),

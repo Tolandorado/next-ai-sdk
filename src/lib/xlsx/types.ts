@@ -77,6 +77,7 @@ export interface ExecuteUpdateCellResult {
   cell: string;
   oldValue: string | number | null;
   newValue: string | number;
+  fullTableContext?: RangeData;
   message: string;
 }
 
@@ -86,6 +87,7 @@ export interface ExecuteRangeUpdateResult {
   from: string;
   to: string;
   cellsUpdated: number | null;
+  fullTableContext?: RangeData;
   message: string;
 }
 
