@@ -22,7 +22,7 @@ export function ThreadList({
             <div className="flex items-center justify-between border-b border-zinc-200 p-4">
                 <h2 className="font-semibold">Треды</h2>
                 <button
-                    onClick={onCreate}
+                    onClick={() => onCreate()}
                     className="rounded-md bg-black px-2 py-1 text-sm text-white hover:bg-zinc-800"
                 >
                     Новый

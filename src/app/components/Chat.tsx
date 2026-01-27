@@ -1,7 +1,7 @@
 import { UpdateCellAction, UpdateRangeAction } from "@/lib/xlsx/types";
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { messagesApi } from "../api/messages/messagesApi";
 import { xlsxApi } from "../api/xlsx/xlsxApi";
 import { MessageInput } from "./MessageInput";
@@ -10,7 +10,7 @@ import { TableModal } from "./TableModal";
 
 interface ChatProps {
     threadId: string | null;
-    onEnsureThread: () => Promise<string | null>;
+    onEnsureThread: (title?: string) => Promise<string | null>;
 }
 
 const tableRangeFrom = process.env.NEXT_PUBLIC_DEFAULT_FROM || "A1";
@@ -23,21 +23,28 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
     const [input, setInput] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const transport = useMemo(() => new DefaultChatTransport({
-        api: "/api/chat",
-        body: () => ({ threadId }),
-    }), []);
+    const threadIdRef = useRef(threadId);
+    const transport =
+        new DefaultChatTransport({
+            api: "/api/chat",
+            body: () => ({ threadId: threadIdRef.current }),
+        })
 
     const {
         messages,
         sendMessage,
         status,
         setMessages,
+        stop
     } = useChat({
         transport,
     });
 
     useEffect(() => { console.log('actual messages:', messages) }, [messages])
+
+    useEffect(() => {
+        threadIdRef.current = threadId;
+    }, [threadId]);
 
     useEffect(() => {
         const loadMessages = async () => {
@@ -60,6 +67,12 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
         };
         loadMessages();
     }, [threadId, setMessages]);
+
+    useEffect(() => {
+        return () => {
+            stop();
+        };
+    }, [threadId, stop]);
 
     const handleOpenTable = async () => {
         try {
@@ -133,17 +146,29 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
 
         let currentId = threadId;
         if (!currentId) {
-            currentId = await onEnsureThread();
+            const title = trimmed.length > 30 ? trimmed.substring(0, 15) + "..." : trimmed;
+            currentId = await onEnsureThread(title);
             if (!currentId) {
                 alert("Failed to create thread");
                 return;
             }
-        }
+            threadIdRef.current = currentId;
+            setMessages([{
+                id: Date.now().toString(),
+                metadata: undefined,
+                role: 'user',
+                parts: [{ type: 'text', text: trimmed }],
+            }])
 
-        sendMessage({
-            text: trimmed,
-        });
-        setInput("");
+            await sendMessage({
+                text: trimmed,
+            });
+        } else {
+            setInput("");
+            await sendMessage({
+                text: trimmed,
+            });
+        }
     };
 
     return (

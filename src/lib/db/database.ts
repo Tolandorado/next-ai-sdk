@@ -8,12 +8,11 @@ let db: Database | null = null;
 
 export function getDatabase(): Database {
   if (!db) {
-    // Ensure data directory exists
     const dbDir = path.dirname(DB_PATH);
     try {
       fs.mkdirSync(dbDir, { recursive: true });
     } catch {
-      // Directory might already exist or cannot be created
+      throw new Error('Failed to create database directory');
     }
 
     db = new Database(DB_PATH);
@@ -23,7 +22,6 @@ export function getDatabase(): Database {
 }
 
 function initializeDatabase(db: Database) {
-  // Create threads table
   db.run(`
     CREATE TABLE IF NOT EXISTS threads (
       id TEXT PRIMARY KEY,
@@ -33,7 +31,6 @@ function initializeDatabase(db: Database) {
     )
   `);
 
-  // Create messages table
   db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
@@ -45,7 +42,6 @@ function initializeDatabase(db: Database) {
     )
   `);
 
-  // Create index for faster queries
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_messages_threadId ON messages(threadId)
   `);

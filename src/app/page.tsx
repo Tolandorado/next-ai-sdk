@@ -41,8 +41,8 @@ export default function ChatPage() {
     setCurrentThreadId(threadId);
   };
 
-  const handleCreateThread = async (): Promise<string | null> => {
-    const thread = await threadsApi.createThread("Новый тред");
+  const handleCreateThread = async (title?: string): Promise<string | null> => {
+    const thread = await threadsApi.createThread(title || "Новый тред");
     if (!thread) return null;
     setThreads((prev) => [thread, ...prev]);
     setCurrentThreadId(thread.id);
