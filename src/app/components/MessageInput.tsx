@@ -37,7 +37,7 @@ export function MessageInput({
       <button
         type="submit"
         disabled={isLoading || !input.trim()}
-        className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+        className="cursor-pointer rounded-xl bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
       >
         {isLoading ? "Отправка..." : "Отправить"}
       </button>

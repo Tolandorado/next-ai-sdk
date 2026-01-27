@@ -23,7 +23,7 @@ export function ThreadList({
                 <h2 className="font-semibold">Треды</h2>
                 <button
                     onClick={() => onCreate()}
-                    className="rounded-md bg-black px-2 py-1 text-sm text-white hover:bg-zinc-800"
+                    className="cursor-pointer rounded-md bg-black px-2 py-1 text-sm text-white hover:bg-zinc-800"
                 >
                     Новый
                 </button>
@@ -41,7 +41,7 @@ export function ThreadList({
                             <li key={thread.id} className="group relative">
                                 <button
                                     onClick={() => onSelect(thread.id)}
-                                    className={`w-full rounded-md px-3 py-2 text-left text-sm  ${currentThreadId === thread.id
+                                    className={`cursor-pointer w-full rounded-md px-3 py-2 text-left text-sm  ${currentThreadId === thread.id
                                         ? "bg-zinc-900 text-white hover:bg-zinc-800"
                                         : "text-zinc-900 hover:bg-zinc-100"
                                         }`}

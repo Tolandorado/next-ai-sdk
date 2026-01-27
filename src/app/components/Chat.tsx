@@ -13,12 +13,7 @@ interface ChatProps {
     onEnsureThread: (title?: string) => Promise<string | null>;
 }
 
-const tableRangeFrom = process.env.NEXT_PUBLIC_DEFAULT_FROM || "A1";
-const tableRangeTo = process.env.NEXT_PUBLIC_DEFAULT_TO || "C3";
-const tableSheet = process.env.NEXT_PUBLIC_DEFAULT_SHEET || "Sheet1";
-
 export function Chat({ threadId, onEnsureThread }: ChatProps) {
-    const [tableData, setTableData] = useState<(string | number | null)[][]>([]);
     const [isTableModalOpen, setIsTableModalOpen] = useState(false);
     const [input, setInput] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
@@ -75,18 +70,7 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
     }, [threadId, stop]);
 
     const handleOpenTable = async () => {
-        try {
-            const data = await xlsxApi.getRange({
-                sheet: tableSheet,
-                from: tableRangeFrom,
-                to: tableRangeTo,
-            });
-
-            setTableData(data.data.map((row: any[]) => row.map((c) => c.value)));
-            setIsTableModalOpen(true);
-        } catch (error) {
-            console.error("Failed to load table:", error);
-        }
+        setIsTableModalOpen(true);
     };
 
     const handleConfirmCellUpdate = async (
@@ -183,7 +167,7 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
                 <button
                     type="button"
                     onClick={handleOpenTable}
-                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+                    className="cursor-pointer rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
                 >
                     Открыть таблицу
                 </button>
@@ -206,10 +190,6 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
             />
             <TableModal
                 isOpen={isTableModalOpen}
-                sheet={tableSheet}
-                from={tableRangeFrom}
-                to={tableRangeTo}
-                data={tableData}
                 onClose={() => setIsTableModalOpen(false)}
                 onSaveSelection={(mention) => handleSaveSelection(mention)}
             />

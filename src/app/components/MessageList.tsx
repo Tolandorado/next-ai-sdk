@@ -5,10 +5,6 @@ import { xlsxApi } from "../api/xlsx/xlsxApi";
 import { useState } from "react";
 import { TableModal } from "./TableModal";
 
-const tableRangeFrom = process.env.NEXT_PUBLIC_DEFAULT_FROM || "A1";
-const tableRangeTo = process.env.NEXT_PUBLIC_DEFAULT_TO || "C3";
-const tableSheet = process.env.NEXT_PUBLIC_DEFAULT_SHEET || "Sheet1";
-
 interface MessageListProps {
   messages: UIMessage[];
   onConfirmCellUpdate?: (args: UpdateCellAction) => Promise<void>;
@@ -27,16 +23,8 @@ export function MessageList({
   isProcessing = false,
 }: MessageListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState<(string | number | null)[][]>([]);;
 
   const handleClick = async () => {
-    const data = await xlsxApi.getRange({
-      sheet: tableSheet,
-      from: tableRangeFrom,
-      to: tableRangeTo,
-    });
-
-    setTableData(data.data.map((row: any[]) => row.map((c) => c.value)))
     setIsModalOpen(true);
   }
 
@@ -95,15 +83,11 @@ export function MessageList({
           </div>
         );
       })}
-      {tableData && (<TableModal
+      <TableModal
         isOpen={isModalOpen}
-        sheet={tableSheet}
-        from={tableRangeFrom}
-        to={tableRangeTo}
-        data={tableData}
         onClose={() => setIsModalOpen(false)}
         onSaveSelection={onSaveSelection}
-      />)}
+      />
     </div>
   );
 }

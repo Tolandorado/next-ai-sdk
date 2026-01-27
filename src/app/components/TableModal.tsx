@@ -1,12 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable } from "./DataTable";
+import { xlsxApi } from "../api/xlsx/xlsxApi";
 
 interface TableModalProps {
   isOpen: boolean;
-  sheet: string;
-  from: string;
-  to: string;
-  data: (string | number | null)[][];
   onClose: () => void;
   onSaveSelection: (mention: string) => void;
 }
@@ -22,18 +19,33 @@ function columnToLetter(col: number): string {
   return letter;
 }
 
+const from = process.env.NEXT_PUBLIC_DEFAULT_FROM || "A1";
+const to = process.env.NEXT_PUBLIC_DEFAULT_TO || "C3";
+const sheet = process.env.NEXT_PUBLIC_DEFAULT_SHEET || "Sheet1";
+
 export function TableModal({
   isOpen,
-  sheet,
-  from,
-  to,
-  data,
   onClose,
   onSaveSelection,
 }: TableModalProps) {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<{ row: number; col: number } | null>(null);
   const [end, setEnd] = useState<{ row: number; col: number } | null>(null);
+
+  const [tableData, setTableData] = useState<(string | number | null)[][]>([]);
+
+  useEffect(() => {
+    const getTableData = async () => {
+      const data = await xlsxApi.getRange({
+        sheet,
+        from,
+        to,
+      });
+
+      setTableData(data.data.map((row: any[]) => row.map((c) => c.value)));
+    }
+    getTableData();
+  }, [isOpen])
 
   if (!isOpen) return null;
 
@@ -98,7 +110,7 @@ export function TableModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-zinc-500 hover:text-zinc-700"
+            className="text-xs text-zinc-500 hover:text-zinc-700 cursor-pointer"
           >
             Закрыть
           </button>
@@ -107,7 +119,7 @@ export function TableModal({
         <div className="flex-1 overflow-auto px-4 py-3">
           <div className="inline-block rounded-lg border border-zinc-200 bg-white">
             <DataTable
-              data={data}
+              data={tableData}
               onCellMouseDown={handleMouseDown}
               onCellMouseEnter={handleMouseEnter}
               isCellSelected={isSelected}
@@ -125,7 +137,7 @@ export function TableModal({
             type="button"
             onClick={handleSaveSelection}
             disabled={!start || !end}
-            className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 cursor-pointer"
           >
             Сохранить выделение
           </button>
