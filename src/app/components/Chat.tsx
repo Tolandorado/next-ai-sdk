@@ -144,15 +144,12 @@ export function Chat({ threadId, onEnsureThread }: ChatProps) {
                 parts: [{ type: 'text', text: trimmed }],
             }])
 
-            await sendMessage({
-                text: trimmed,
-            });
-        } else {
-            setInput("");
-            await sendMessage({
-                text: trimmed,
-            });
+
         }
+        setInput("");
+        await sendMessage({
+            text: trimmed,
+        });
     };
 
     return (

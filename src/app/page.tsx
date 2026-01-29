@@ -69,7 +69,7 @@ export default function ChatPage() {
         isLoading={isLoadingThreads}
       />
       <Chat
-        key={currentThreadId}
+        // key={currentThreadId}
         threadId={currentThreadId}
         onEnsureThread={handleCreateThread}
       />
