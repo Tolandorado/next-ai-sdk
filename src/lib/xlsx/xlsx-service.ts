@@ -43,7 +43,6 @@ function getWorkbook(): XLSX.WorkBook {
 
 function saveWorkbook() {
   if (workbook) {
-    // XLSX.writeFile(workbook, XLSX_FILE_PATH);
     try {
       const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
       fs.writeFileSync(XLSX_FILE_PATH, buffer);
@@ -61,10 +60,7 @@ export function getCellValue(sheetName: string, cell: string): string | number |
     return null;
   }
 
-  const cellRef = XLSX.utils.decode_cell(cell);
-  const cellAddress = XLSX.utils.encode_cell(cellRef);
-  const cellData = sheet[cellAddress];
-
+  const cellData = sheet[cell];
   return cellData ? (cellData.v !== undefined ? cellData.v : null) : null;
 }
 
@@ -104,18 +100,23 @@ export function updateCell(sheetName: string, cell: string, value: string | numb
   let sheet = wb.Sheets[sheetName];
 
   if (!sheet) {
-    // Create new sheet if it doesn't exist
     sheet = XLSX.utils.aoa_to_sheet([]);
     XLSX.utils.book_append_sheet(wb, sheet, sheetName);
   }
 
-  const cellRef = XLSX.utils.decode_cell(cell);
-  if (!sheet[XLSX.utils.encode_cell(cellRef)]) {
-    // Initialize cell if it doesn't exist
-    sheet[XLSX.utils.encode_cell(cellRef)] = {};
+  if (!sheet[cell]) {
+    sheet[cell] = {};
   }
 
-  sheet[XLSX.utils.encode_cell(cellRef)].v = value;
+  if (sheet[cell].f) {
+    delete sheet[cell].f;
+  }
+
+  typeof value === 'number'
+    ? sheet[cell].t = 'n'
+    : sheet[cell].t = 's'
+
+  sheet[cell].v = value;
   saveWorkbook();
 }
 
@@ -139,7 +140,15 @@ export function updateRange(sheetName: string, from: string, to: string, values:
         if (!sheet[cellAddress]) {
           sheet[cellAddress] = {};
         }
-        sheet[cellAddress].v = values[row][col];
+        if (sheet[cellAddress].f) {
+          delete sheet[cellAddress].f;
+        }
+        const currentValue = values[row][col];
+        typeof currentValue === 'number'
+          ? sheet[cellAddress].t = 'n'
+          : sheet[cellAddress].t = 's'
+
+        sheet[cellAddress].v = currentValue;
       }
     }
   }
@@ -155,10 +164,7 @@ export function getFormula(sheetName: string, cell: string): string | null {
     return null;
   }
 
-  const cellRef = XLSX.utils.decode_cell(cell);
-  const cellAddress = XLSX.utils.encode_cell(cellRef);
-  const cellData = sheet[cellAddress];
-
+  const cellData = sheet[cell];
   return cellData?.f || null;
 }
 
